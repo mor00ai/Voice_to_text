@@ -1,541 +1,138 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voice to Text - Trascrizione Vocale</title>
-    
-    <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#667eea">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Voice to Text">
-    <meta name="description" content="Registra la tua voce e convertila in testo da condividere">
-    
-    <!-- Manifest -->
-    <link rel="manifest" href="manifest.json">
-    
-    <!-- Favicon and Icons -->
-    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
-    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="apple-touch-icon" sizes="152x152" href="icons/apple-touch-icon-152x152.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon-180x180.png">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-
-        .container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            padding: 30px;
-            max-width: 500px;
-            width: 100%;
-            text-align: center;
-        }
-
-        h1 {
-            color: #333;
-            margin-bottom: 30px;
-            font-size: 2rem;
-        }
-
-        .record-section {
-            margin-bottom: 30px;
-        }
-
-        .record-btn {
-            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
-            border: none;
-            border-radius: 50%;
-            width: 100px;
-            height: 100px;
-            color: white;
-            font-size: 2rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3);
-            margin-bottom: 15px;
-        }
-
-        .record-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 35px rgba(255, 107, 107, 0.4);
-        }
-
-        .record-btn.recording {
-            background: linear-gradient(45deg, #26de81, #20bf6b);
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-
-        .status {
-            font-size: 1.1rem;
-            color: #666;
-            margin-bottom: 20px;
-            min-height: 25px;
-        }
-
-        .text-output {
-            background: #f8f9fa;
-            border: 2px solid #e9ecef;
-            border-radius: 15px;
-            padding: 20px;
-            min-height: 120px;
-            margin-bottom: 25px;
-            text-align: left;
-            font-size: 1rem;
-            line-height: 1.6;
-            color: #333;
-            resize: vertical;
-            width: 100%;
-            font-family: inherit;
-        }
-
-        .text-output:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        .control-btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 25px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            font-size: 0.9rem;
-        }
-
-        .clear-btn {
-            background: linear-gradient(45deg, #ff7675, #e17055);
-            color: white;
-        }
-
-        .clear-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(255, 118, 117, 0.3);
-        }
-
-        .copy-btn {
-            background: linear-gradient(45deg, #74b9ff, #0984e3);
-            color: white;
-        }
-
-        .copy-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(116, 185, 255, 0.3);
-        }
-
-        .share-section {
-            border-top: 2px solid #f1f2f6;
-            padding-top: 25px;
-        }
-
-        .share-title {
-            font-size: 1.2rem;
-            color: #333;
-            margin-bottom: 20px;
-        }
-
-        .share-buttons {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .share-btn {
-            padding: 12px 20px;
-            border: none;
-            border-radius: 30px;
-            cursor: pointer;
-            font-weight: 600;
-            color: white;
-            transition: all 0.3s ease;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .whatsapp-btn {
-            background: linear-gradient(45deg, #25D366, #128C7E);
-        }
-
-        .whatsapp-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(37, 211, 102, 0.3);
-        }
-
-        .telegram-btn {
-            background: linear-gradient(45deg, #0088cc, #005885);
-        }
-
-        .telegram-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0, 136, 204, 0.3);
-        }
-
-        .sms-btn {
-            background: linear-gradient(45deg, #fd79a8, #e84393);
-        }
-
-        .sms-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(253, 121, 168, 0.3);
-        }
-
-        .generic-share-btn {
-            background: linear-gradient(45deg, #a29bfe, #6c5ce7);
-        }
-
-        .generic-share-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(162, 155, 254, 0.3);
-        }
-
-        .error-message {
-            background: #ffe6e6;
-            color: #d63031;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            border-left: 4px solid #d63031;
-        }
-
-        .success-message {
-            background: #e8f5e8;
-            color: #00b894;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            border-left: 4px solid #00b894;
-        }
-
-        @media (max-width: 480px) {
-            .share-buttons {
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            .share-btn {
-                width: 200px;
-                justify-content: center;
-            }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voice to Text PWA</title>
+  <link rel="manifest" href="manifest.json?v=auto" />
+  <meta name="theme-color" content="#1976d2" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 1rem;
+      text-align: center;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+    }
+    select, button, textarea {
+      width: 100%;
+      padding: 1rem;
+      margin: 0.5rem 0;
+      font-size: 1rem;
+    }
+    textarea {
+      height: 150px;
+      resize: none;
+    }
+    .share-buttons {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 1rem;
+    }
+    .share-buttons button {
+      flex: 1 1 30%;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🎤 Voice to Text</h1>
-        
-        <div class="record-section">
-            <button class="record-btn" id="recordBtn">🎤</button>
-            <div class="status" id="status">Premi il microfono per iniziare</div>
-        </div>
+  <div class="container">
+    <h1>🎤 Voice to Text</h1>
+    
+    <label for="language">🌐 Seleziona Lingua:</label>
+    <select id="language">
+      <option value="it-IT">🇮🇹 Italiano</option>
+      <option value="en-US">🇺🇸 English</option>
+      <option value="es-ES">🇪🇸 Español</option>
+      <option value="fr-FR">🇫🇷 Français</option>
+      <option value="de-DE">🇩🇪 Deutsch</option>
+    </select>
 
-        <textarea class="text-output" id="textOutput" placeholder="Il testo trascritto apparirà qui..."></textarea>
+    <button id="startBtn">🎙️ Avvia Registrazione</button>
+    <button id="stopBtn" disabled>🛑 Ferma</button>
+    <textarea id="output" placeholder="Il testo apparirà qui..."></textarea>
 
-        <div class="controls">
-            <button class="control-btn clear-btn" id="clearBtn">🗑️ Cancella</button>
-            <button class="control-btn copy-btn" id="copyBtn">📋 Copia</button>
-        </div>
-
-        <div class="share-section">
-            <h3 class="share-title">Condividi il testo:</h3>
-            <div class="share-buttons">
-                <button class="share-btn whatsapp-btn" id="whatsappBtn">
-                    📱 WhatsApp
-                </button>
-                <button class="share-btn telegram-btn" id="telegramBtn">
-                    ✈️ Telegram
-                </button>
-                <button class="share-btn sms-btn" id="smsBtn">
-                    💬 SMS
-                </button>
-                <button class="share-btn generic-share-btn" id="shareBtn">
-                    🔗 Condividi
-                </button>
-            </div>
-        </div>
-
-        <div id="messageArea"></div>
+    <div class="share-buttons">
+      <button id="shareWhatsApp">📱 WhatsApp</button>
+      <button id="shareTelegram">📨 Telegram</button>
+      <button id="shareSMS">✉️ SMS</button>
     </div>
+  </div>
 
-    <script>
-        class VoiceToTextApp {
-            constructor() {
-                this.recognition = null;
-                this.isRecording = false;
-                this.recordBtn = document.getElementById('recordBtn');
-                this.status = document.getElementById('status');
-                this.textOutput = document.getElementById('textOutput');
-                this.clearBtn = document.getElementById('clearBtn');
-                this.copyBtn = document.getElementById('copyBtn');
-                this.whatsappBtn = document.getElementById('whatsappBtn');
-                this.telegramBtn = document.getElementById('telegramBtn');
-                this.smsBtn = document.getElementById('smsBtn');
-                this.shareBtn = document.getElementById('shareBtn');
-                this.messageArea = document.getElementById('messageArea');
+  <script>
+    // Registrazione del service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js?cacheBust=' + Date.now())
+        .then(reg => {
+          console.log('SW registrato:', reg);
+          reg.update(); // forza aggiornamento automatico
+        })
+        .catch(err => console.error('SW error:', err));
+    }
 
-                this.initSpeechRecognition();
-                this.bindEvents();
-            }
+    const output = document.getElementById('output');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const languageSelect = document.getElementById('language');
 
-            initSpeechRecognition() {
-                if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                    this.recognition = new SpeechRecognition();
-                    
-                    this.recognition.continuous = true;
-                    this.recognition.interimResults = true;
-                    this.recognition.lang = 'it-IT';
+    let recognition;
+    if ('webkitSpeechRecognition' in window) {
+      recognition = new webkitSpeechRecognition();
+    } else if ('SpeechRecognition' in window) {
+      recognition = new SpeechRecognition();
+    }
 
-                    this.recognition.onstart = () => {
-                        this.isRecording = true;
-                        this.recordBtn.classList.add('recording');
-                        this.recordBtn.innerHTML = '⏹️';
-                        this.status.textContent = 'Sto ascoltando... Parla ora!';
-                        this.showMessage('Registrazione avviata', 'success');
-                    };
+    if (recognition) {
+      recognition.continuous = true;
+      recognition.interimResults = true;
 
-                    this.recognition.onresult = (event) => {
-                        let finalTranscript = '';
-                        let interimTranscript = '';
-
-                        for (let i = event.resultIndex; i < event.results.length; i++) {
-                            const transcript = event.results[i][0].transcript;
-                            if (event.results[i].isFinal) {
-                                finalTranscript += transcript + ' ';
-                            } else {
-                                interimTranscript += transcript;
-                            }
-                        }
-
-                        this.textOutput.value = this.textOutput.value + finalTranscript;
-                        this.status.textContent = interimTranscript || 'Sto ascoltando...';
-                    };
-
-                    this.recognition.onerror = (event) => {
-                        console.error('Errore riconoscimento vocale:', event.error);
-                        this.showMessage(`Errore: ${this.getErrorMessage(event.error)}`, 'error');
-                        this.stopRecording();
-                    };
-
-                    this.recognition.onend = () => {
-                        this.stopRecording();
-                    };
-                } else {
-                    this.showMessage('Il tuo browser non supporta il riconoscimento vocale', 'error');
-                }
-            }
-
-            getErrorMessage(error) {
-                const errorMessages = {
-                    'network': 'Problema di connessione di rete',
-                    'not-allowed': 'Permesso microfono negato',
-                    'service-not-allowed': 'Servizio non consentito',
-                    'bad-grammar': 'Errore di grammatica',
-                    'language-not-supported': 'Lingua non supportata',
-                    'no-speech': 'Nessun audio rilevato',
-                    'audio-capture': 'Errore di cattura audio'
-                };
-                return errorMessages[error] || 'Errore sconosciuto';
-            }
-
-            bindEvents() {
-                this.recordBtn.addEventListener('click', () => {
-                    if (this.isRecording) {
-                        this.recognition?.stop();
-                    } else {
-                        this.startRecording();
-                    }
-                });
-
-                this.clearBtn.addEventListener('click', () => {
-                    this.textOutput.value = '';
-                    this.showMessage('Testo cancellato', 'success');
-                });
-
-                this.copyBtn.addEventListener('click', () => {
-                    this.copyToClipboard();
-                });
-
-                this.whatsappBtn.addEventListener('click', () => {
-                    this.shareToWhatsApp();
-                });
-
-                this.telegramBtn.addEventListener('click', () => {
-                    this.shareToTelegram();
-                });
-
-                this.smsBtn.addEventListener('click', () => {
-                    this.shareToSMS();
-                });
-
-                this.shareBtn.addEventListener('click', () => {
-                    this.genericShare();
-                });
-            }
-
-            startRecording() {
-                if (!this.recognition) {
-                    this.showMessage('Riconoscimento vocale non disponibile', 'error');
-                    return;
-                }
-
-                navigator.mediaDevices.getUserMedia({ audio: true })
-                    .then(() => {
-                        this.recognition.start();
-                    })
-                    .catch((error) => {
-                        console.error('Errore accesso microfono:', error);
-                        this.showMessage('Impossibile accedere al microfono. Controlla i permessi.', 'error');
-                    });
-            }
-
-            stopRecording() {
-                this.isRecording = false;
-                this.recordBtn.classList.remove('recording');
-                this.recordBtn.innerHTML = '🎤';
-                this.status.textContent = 'Premi il microfono per iniziare';
-            }
-
-            copyToClipboard() {
-                const text = this.textOutput.value;
-                if (!text.trim()) {
-                    this.showMessage('Non c\'è testo da copiare', 'error');
-                    return;
-                }
-
-                navigator.clipboard.writeText(text)
-                    .then(() => {
-                        this.showMessage('Testo copiato negli appunti!', 'success');
-                    })
-                    .catch(() => {
-                        // Fallback per browser più vecchi
-                        this.textOutput.select();
-                        document.execCommand('copy');
-                        this.showMessage('Testo copiato negli appunti!', 'success');
-                    });
-            }
-
-            shareToWhatsApp() {
-                const text = this.textOutput.value;
-                if (!text.trim()) {
-                    this.showMessage('Non c\'è testo da condividere', 'error');
-                    return;
-                }
-
-                const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-                window.open(url, '_blank');
-            }
-
-            shareToTelegram() {
-                const text = this.textOutput.value;
-                if (!text.trim()) {
-                    this.showMessage('Non c\'è testo da condividere', 'error');
-                    return;
-                }
-
-                const url = `https://t.me/share/url?text=${encodeURIComponent(text)}`;
-                window.open(url, '_blank');
-            }
-
-            shareToSMS() {
-                const text = this.textOutput.value;
-                if (!text.trim()) {
-                    this.showMessage('Non c\'è testo da condividere', 'error');
-                    return;
-                }
-
-                const url = `sms:?body=${encodeURIComponent(text)}`;
-                window.location.href = url;
-            }
-
-            genericShare() {
-                const text = this.textOutput.value;
-                if (!text.trim()) {
-                    this.showMessage('Non c\'è testo da condividere', 'error');
-                    return;
-                }
-
-                if (navigator.share) {
-                    navigator.share({
-                        title: 'Testo trascritto',
-                        text: text
-                    }).then(() => {
-                        this.showMessage('Condivisione completata!', 'success');
-                    }).catch((error) => {
-                        console.error('Errore condivisione:', error);
-                        this.copyToClipboard();
-                    });
-                } else {
-                    // Fallback: copia negli appunti
-                    this.copyToClipboard();
-                }
-            }
-
-            showMessage(message, type) {
-                const messageDiv = document.createElement('div');
-                messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
-                messageDiv.textContent = message;
-                
-                this.messageArea.innerHTML = '';
-                this.messageArea.appendChild(messageDiv);
-
-                setTimeout(() => {
-                    messageDiv.remove();
-                }, 3000);
-            }
+      recognition.onresult = (event) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          transcript += event.results[i][0].transcript;
         }
+        output.value = transcript;
+      };
 
-        // Inizializza l'app quando la pagina è caricata
-        document.addEventListener('DOMContentLoaded', () => {
-            new VoiceToTextApp();
-            
-            // Registra il Service Worker
-            if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('sw.js')
-                        .then((registration) => {
-                            console.log('SW registrato con successo:', registration);
-                        })
-                        .catch((registrationError) => {
-                            console.log('Registrazione SW fallita:', registrationError);
-                        });
-                });
-            }
-        });
-    </script>
+      recognition.onerror = (event) => {
+        console.error('Errore riconoscimento vocale:', event.error);
+      };
+
+      startBtn.onclick = () => {
+        recognition.lang = languageSelect.value;
+        recognition.start();
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+      };
+
+      stopBtn.onclick = () => {
+        recognition.stop();
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+      };
+    } else {
+      alert('Il riconoscimento vocale non è supportato in questo browser.');
+      startBtn.disabled = true;
+    }
+
+    // Condivisione
+    document.getElementById('shareWhatsApp').onclick = () => {
+      const text = encodeURIComponent(output.value);
+      window.open(`https://wa.me/?text=${text}`, '_blank');
+    };
+    document.getElementById('shareTelegram').onclick = () => {
+      const text = encodeURIComponent(output.value);
+      window.open(`https://t.me/share/url?text=${text}`, '_blank');
+    };
+    document.getElementById('shareSMS').onclick = () => {
+      const text = encodeURIComponent(output.value);
+      window.open(`sms:?body=${text}`, '_blank');
+    };
+  </script>
 </body>
 </html>
