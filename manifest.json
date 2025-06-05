@@ -1,41 +1,22 @@
-
 {
   "name": "Voice to Text PWA",
   "short_name": "Voice2Text",
-  "start_url": "/index.html?v=1.0.0",
+  "start_url": "./?source=pwa",
   "display": "standalone",
   "background_color": "#1976d2",
   "theme_color": "#1976d2",
+  "description": "Converti la voce in testo direttamente dal browser.",
   "icons": [
     {
-      "src": "icons/it-192.png",
+      "src": "icons/mic-192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "lang": "it"
+      "type": "image/png"
     },
     {
-      "src": "icons/en-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "lang": "en"
-    },
-    {
-      "src": "icons/es-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "lang": "es"
-    },
-    {
-      "src": "icons/fr-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "lang": "fr"
-    },
-    {
-      "src": "icons/de-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "lang": "de"
+      "src": "icons/mic-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
     }
-  ]
+  ],
+  "lang": "it-IT"
 }
