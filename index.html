@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Voice to Text PWA</title>
-  <link rel="manifest" href="manifest.json?v=1.0.0" />
+  <link rel="manifest" href="manifest.json?v=auto" />
   <meta name="theme-color" content="#1976d2" />
   <style>
     body {
@@ -23,8 +23,6 @@
       padding: 1rem;
       margin: 0.5rem 0;
       font-size: 1rem;
-      border-radius: 5px;
-      border: 1px solid #ccc;
     }
     textarea {
       height: 150px;
@@ -39,15 +37,34 @@
     }
     .share-buttons button {
       flex: 1 1 30%;
-      cursor: pointer;
-      background-color: #1976d2;
-      border: none;
-      color: white;
-      font-weight: bold;
-      transition: background-color 0.3s ease;
     }
-    .share-buttons button:hover {
-      background-color: #145a9d;
+    .cache-control {
+      margin-top: 2rem;
+      background: #eee;
+      border-radius: 8px;
+      padding: 1rem;
+      font-size: 0.9rem;
+      color: #333;
+    }
+    .cache-control button {
+      width: auto;
+      padding: 0.7rem 1.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+      background: #1976d2;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      transition: background 0.3s ease;
+    }
+    .cache-control button:hover {
+      background: #155a9c;
+    }
+    .status {
+      margin-top: 0.5rem;
+      font-weight: bold;
+      min-height: 1.2em;
+      color: #1976d2;
     }
   </style>
 </head>
@@ -73,24 +90,33 @@
       <button id="shareTelegram">📨 Telegram</button>
       <button id="shareSMS">✉️ SMS</button>
     </div>
+
+    <!-- Pannello controllo cache e service worker -->
+    <div class="cache-control">
+      <p>⚙️ Gestione cache e service worker:</p>
+      <button id="clearCacheBtn">🗑️ Pulisci Cache & Disinstalla SW</button>
+      <div class="status" id="cacheStatus"></div>
+    </div>
   </div>
 
   <script>
-    // Registrazione del service worker con cache busting automatico
+    // Registrazione del service worker con cache bust per aggiornamenti automatici
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js?v=' + Date.now())
         .then(reg => {
           console.log('Service Worker registrato:', reg);
-          reg.update();
+          reg.update(); // forza aggiornamento automatico
         })
         .catch(err => console.error('Errore registrazione SW:', err));
     }
 
+    // Variabili elementi
     const output = document.getElementById('output');
     const startBtn = document.getElementById('startBtn');
     const stopBtn = document.getElementById('stopBtn');
     const languageSelect = document.getElementById('language');
 
+    // Riconoscimento vocale
     let recognition;
     if ('webkitSpeechRecognition' in window) {
       recognition = new webkitSpeechRecognition();
@@ -131,7 +157,7 @@
       startBtn.disabled = true;
     }
 
-    // Pulsanti di condivisione funzionanti
+    // Pulsanti condivisione
     document.getElementById('shareWhatsApp').onclick = () => {
       const text = encodeURIComponent(output.value);
       window.open(`https://wa.me/?text=${text}`, '_blank');
@@ -144,7 +170,56 @@
       const text = encodeURIComponent(output.value);
       window.open(`sms:?body=${text}`, '_blank');
     };
+
+    // Funzione per pulire cache e disinstallare service worker
+    const clearCacheBtn = document.getElementById('clearCacheBtn');
+    const cacheStatus = document.getElementById('cacheStatus');
+
+    clearCacheBtn.onclick = async () => {
+      cacheStatus.textContent = 'Pulizia in corso...';
+
+      // Disinstalla tutti i service worker
+      if ('serviceWorker' in navigator) {
+        try {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (const registration of registrations) {
+            await registration.unregister();
+          }
+          cacheStatus.textContent = 'Service worker disinstallati.';
+        } catch (e) {
+          cacheStatus.textContent = 'Errore nella disinstallazione service worker.';
+          console.error(e);
+          return;
+        }
+      } else {
+        cacheStatus.textContent = 'Service worker non supportati da questo browser.';
+      }
+
+      // Svuota tutte le cache
+      if ('caches' in window) {
+        try {
+          const keys = await caches.keys();
+          for (const key of keys) {
+            await caches.delete(key);
+          }
+          cacheStatus.textContent += ' Cache cancellate.';
+        } catch (e) {
+          cacheStatus.textContent = 'Errore nella cancellazione cache.';
+          console.error(e);
+          return;
+        }
+      } else {
+        cacheStatus.textContent += ' Cache non supportate da questo browser.';
+      }
+
+      // Ricarica la pagina per riflettere i cambiamenti
+      setTimeout(() => {
+        cacheStatus.textContent = 'Pagina ricaricata.';
+        window.location.reload(true);
+      }, 1500);
+    };
   </script>
 </body>
 </html>
+
 
