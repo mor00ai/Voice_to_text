@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Voice to Text PWA</title>
-  <link rel="manifest" href="manifest.json?v=auto" />
+  <link rel="manifest" href="manifest.json?v=1.0.0" />
   <meta name="theme-color" content="#1976d2" />
   <style>
     body {
@@ -23,6 +23,8 @@
       padding: 1rem;
       margin: 0.5rem 0;
       font-size: 1rem;
+      border-radius: 5px;
+      border: 1px solid #ccc;
     }
     textarea {
       height: 150px;
@@ -37,6 +39,15 @@
     }
     .share-buttons button {
       flex: 1 1 30%;
+      cursor: pointer;
+      background-color: #1976d2;
+      border: none;
+      color: white;
+      font-weight: bold;
+      transition: background-color 0.3s ease;
+    }
+    .share-buttons button:hover {
+      background-color: #145a9d;
     }
   </style>
 </head>
@@ -65,14 +76,14 @@
   </div>
 
   <script>
-    // Registrazione del service worker
+    // Registrazione del service worker con cache busting automatico
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?cacheBust=' + Date.now())
+      navigator.serviceWorker.register('sw.js?v=' + Date.now())
         .then(reg => {
-          console.log('SW registrato:', reg);
-          reg.update(); // forza aggiornamento automatico
+          console.log('Service Worker registrato:', reg);
+          reg.update();
         })
-        .catch(err => console.error('SW error:', err));
+        .catch(err => console.error('Errore registrazione SW:', err));
     }
 
     const output = document.getElementById('output');
@@ -120,7 +131,7 @@
       startBtn.disabled = true;
     }
 
-    // Condivisione
+    // Pulsanti di condivisione funzionanti
     document.getElementById('shareWhatsApp').onclick = () => {
       const text = encodeURIComponent(output.value);
       window.open(`https://wa.me/?text=${text}`, '_blank');
@@ -136,3 +147,4 @@
   </script>
 </body>
 </html>
+
