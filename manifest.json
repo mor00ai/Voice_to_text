@@ -1,110 +1,41 @@
-{
-  "name": "Voice to Text - Trascrizione Vocale",
-  "short_name": "Voice2Text",
-  "description": "Registra la tua voce e convertila in testo da condividere su WhatsApp, Telegram e SMS",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#667eea",
-  "theme_color": "#667eea",
-  "orientation": "portrait-primary",
-  "scope": "/",
-  "lang": "it",
-  "categories": ["productivity", "utilities"],
-  "screenshots": [
-    {
-      "src": "screenshots/desktop-screenshot.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Voice to Text su desktop"
-    },
-    {
-      "src": "screenshots/mobile-screenshot.png",
-      "sizes": "375x812",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Voice to Text su mobile"
-    }
-  ],
-  "icons": [
-    {
-      "src": "icons/icon-72x72.png",
-      "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "icons/icon-96x96.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "icons/icon-128x128.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "icons/icon-144x144.png",
-      "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "icons/icon-152x152.png",
-      "sizes": "152x152",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "icons/icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "icons/icon-384x384.png",
-      "sizes": "384x384",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "icons/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "icons/apple-touch-icon.png",
-      "sizes": "180x180",
-      "type": "image/png"
-    },
-    {
-      "src": "icons/favicon-32x32.png",
-      "sizes": "32x32",
-      "type": "image/png"
-    },
-    {
-      "src": "icons/favicon-16x16.png",
-      "sizes": "16x16",
-      "type": "image/png"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Nuova Registrazione",
-      "short_name": "Registra",
-      "description": "Inizia subito una nuova registrazione vocale",
-      "url": "/?action=record",
-      "icons": [
-        {
-          "src": "icons/shortcut-record.png",
-          "sizes": "192x192"
+const CACHE_NAME = 'voice-to-text-v3'; // cambia automaticamente versione con bust
+
+const FILES_TO_CACHE = [
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/sw.js'
+];
+
+self.addEventListener('install', (event) => {
+  console.log('[ServiceWorker] Install');
+  self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => {
+      return cache.addAll(FILES_TO_CACHE);
+    })
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  console.log('[ServiceWorker] Activate');
+  event.waitUntil(
+    caches.keys().then(keyList => {
+      return Promise.all(keyList.map(key => {
+        if (key !== CACHE_NAME) {
+          console.log('[ServiceWorker] Removing old cache:', key);
+          return caches.delete(key);
         }
-      ]
-    }
-  ],
-  "related_applications": [],
-  "prefer_related_applications": false
-}
+      }));
+    })
+  );
+  return self.clients.claim();
+});
+
+self.addEventListener('fetch', (event) => {
+  event.respondWith(
+    caches.match(event.request).then(response => {
+      return response || fetch(event.request);
+    })
+  );
+});
