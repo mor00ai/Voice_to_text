@@ -1,38 +1,36 @@
-const CACHE_NAME = 'voice-to-text-v3'; // cambia automaticamente versione con bust
 
-const FILES_TO_CACHE = [
+const CACHE_NAME = 'voice-to-text-cache-v' + new Date().getTime();
+
+const urlsToCache = [
   '/',
-  '/index.html',
-  '/manifest.json',
-  '/sw.js'
+  '/index.html?v=1.0.0',
+  '/manifest.json?v=1.0.0',
+  // inserisci qui eventuali risorse aggiuntive come CSS, immagini, ecc.
 ];
 
-self.addEventListener('install', (event) => {
-  console.log('[ServiceWorker] Install');
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(urlsToCache))
+  );
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(FILES_TO_CACHE);
-    })
-  );
 });
 
-self.addEventListener('activate', (event) => {
-  console.log('[ServiceWorker] Activate');
+self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keyList => {
-      return Promise.all(keyList.map(key => {
-        if (key !== CACHE_NAME) {
-          console.log('[ServiceWorker] Removing old cache:', key);
-          return caches.delete(key);
-        }
-      }));
-    })
+    caches.keys()
+      .then(keys => Promise.all(
+        keys.map(key => {
+          if (key !== CACHE_NAME) {
+            return caches.delete(key);
+          }
+        })
+      ))
   );
-  return self.clients.claim();
+  self.clients.claim();
 });
 
-self.addEventListener('fetch', (event) => {
+self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request).then(response => {
       return response || fetch(event.request);
