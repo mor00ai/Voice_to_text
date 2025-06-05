@@ -1,44 +1,41 @@
+
 {
   "name": "Voice to Text PWA",
   "short_name": "Voice2Text",
-  "start_url": "index.html",
+  "start_url": "/index.html?v=1.0.0",
   "display": "standalone",
+  "background_color": "#1976d2",
   "theme_color": "#1976d2",
-  "background_color": "#ffffff",
-  "lang": "it-IT",
-  "description": "Trasforma la tua voce in testo. Multilingua, offline e condivisibile.",
   "icons": [
     {
-      "src": "icons/icon-192-it.png",
+      "src": "icons/it-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "maskable"
+      "lang": "it"
     },
     {
-      "src": "icons/icon-512-it.png",
-      "sizes": "512x512",
+      "src": "icons/en-192.png",
+      "sizes": "192x192",
       "type": "image/png",
-      "purpose": "maskable"
+      "lang": "en"
     },
     {
-      "src": "icons/icon-192-en.png",
+      "src": "icons/es-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "lang": "es"
     },
     {
-      "src": "icons/icon-512-en.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    },
-    {
-      "src": "icons/icon-192-fr.png",
+      "src": "icons/fr-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "lang": "fr"
     },
     {
-      "src": "icons/icon-512-fr.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "src": "icons/de-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "lang": "de"
     }
   ]
 }
