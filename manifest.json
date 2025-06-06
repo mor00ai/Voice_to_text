@@ -1,22 +1,53 @@
 {
   "name": "Voice to Text PWA",
   "short_name": "Voice2Text",
-  "start_url": "./?source=pwa",
+  "description": "Applicazione per convertire voce in testo con supporto multilingua",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#1976d2",
+  "background_color": "#f4f4f4",
   "theme_color": "#1976d2",
-  "description": "Converti la voce in testo direttamente dal browser.",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "it",
+  "dir": "ltr",
+  "categories": ["productivity", "utilities"],
   "icons": [
     {
-      "src": "icons/mic-192.png",
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9IiMxOTc2ZDIiLz4KPHN2ZyB4PSI0OCIgeT0iNDgiIHdpZHRoPSI5NiIgaGVpZ2h0PSI5NiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+CjxwYXRoIGQ9Im0xMiAxIC0yIDIgMS4yNSAyLjUgTTQgMTFsOSAyIDIgLTMgMSAtMSIvPgo8cGF0aCBkPSJtNSAxNiAyIDIgMi41IC0xLjI1TDE1IDIwbDIgLTIgLTMgLTIgLTEgLTEiLz4KPHN0cm9rZSBkPSJNMTIgOGE0IDQgMCAwIDEgNCA0bC0xIDFhNCA0IDAgMCAxIC00IDR2IC0yYTIgMiAwIDAgMSAyIC0yaDIiLz4KPHN0cm9rZSBkPSJNMTIgOGE0IDQgMCAwIDEgNCA0bC0xIDFhNCA0IDAgMCAxIC00IDR2IC0yYTIgMiAwIDAgMSAyIC0yaDIiLz4KPC9zdmc+Cjwvc3ZnPg==",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     },
     {
-      "src": "icons/mic-512.png",
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iNjQiIGZpbGw9IiMxOTc2ZDIiLz4KPHN2ZyB4PSIxMjgiIHk9IjEyOCIgd2lkdGg9IjI1NiIgaGVpZ2h0PSIyNTYiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPgo8cGF0aCBkPSJtMTIgMSAtMiAyIDEuMjUgMi41IE00IDExbDkgMiAyIC0zIDEgLTEiLz4KPHN0cm9rZSBkPSJNMTIgOGE0IDQgMCAwIDEgNCA0bC0xIDFhNCA0IDAgMCAxIC00IDR2IC0yYTIgMiAwIDAgMSAyIC0yaDIiLz4KPC9zdmc+Cjwvc3ZnPg==",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ],
-  "lang": "it-IT"
+  "shortcuts": [
+    {
+      "name": "Inizia Registrazione",
+      "short_name": "Registra",
+      "description": "Avvia immediatamente la registrazione vocale",
+      "url": "/?action=start",
+      "icons": [
+        {
+          "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOTYiIGhlaWdodD0iOTYiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMTk3NmQyIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+CjxwYXRoIGQ9Im0xMiAxIC0yIDIgMS4yNSAyLjUgTTQgMTFsOSAyIDIgLTMgMSAtMSIvPgo8L3N2Zz4=",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjU2OCIgdmlld0JveD0iMCAwIDMyMCA1NjgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMjAiIGhlaWdodD0iNTY4IiBmaWxsPSIjZjRmNGY0Ii8+CjxyZWN0IHg9IjIwIiB5PSI2MCIgd2lkdGg9IjI4MCIgaGVpZ2h0PSI0MCIgcng9IjUiIGZpbGw9IiMxOTc2ZDIiLz4KPHN2ZyB4PSIxNjAiIHk9IjIwMCIgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzE5NzZkMiIgc3Ryb2tlLXdpZHRoPSIyIj4KPHN0cm9rZSBkPSJNMTIgOGE0IDQgMCAwIDEgNCA0bC0xIDFhNCA0IDAgMCAxIC00IDR2IC0yYTIgMiAwIDAgMSAyIC0yaDIiLz4KPC9zdmc+CjxyZWN0IHg9IjIwIiB5PSIzMDAiIHdpZHRoPSIyODAiIGhlaWdodD0iMTAwIiByeD0iNSIgZmlsbD0id2hpdGUiIHN0cm9rZT0iI2RkZCIvPgo8L3N2Zz4=",
+      "sizes": "320x568",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    }
+  ],
+  "version": "1.0.0"
 }
