@@ -2,31 +2,64 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Voice to Text PWA</title>
-  <link rel="manifest" href="manifest.json?v=auto" />
+  <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#1976d2" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Voice to Text" />
   <style>
+    * {
+      box-sizing: border-box;
+    }
     body {
       font-family: Arial, sans-serif;
       background: #f4f4f4;
       margin: 0;
       padding: 1rem;
       text-align: center;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
     .container {
       max-width: 600px;
       margin: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
     }
     select, button, textarea {
       width: 100%;
       padding: 1rem;
       margin: 0.5rem 0;
       font-size: 1rem;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      background: white;
+    }
+    button {
+      cursor: pointer;
+      background: #1976d2;
+      color: white;
+      border: none;
+      transition: background 0.3s ease;
+      touch-action: manipulation;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    button:hover {
+      background: #155a9c;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
     }
     textarea {
       height: 150px;
       resize: none;
+      font-family: inherit;
     }
     .share-buttons {
       display: flex;
@@ -37,6 +70,7 @@
     }
     .share-buttons button {
       flex: 1 1 30%;
+      min-width: 120px;
     }
     .cache-control {
       margin-top: 2rem;
@@ -50,21 +84,44 @@
       width: auto;
       padding: 0.7rem 1.5rem;
       font-size: 1rem;
-      cursor: pointer;
-      background: #1976d2;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      transition: background 0.3s ease;
-    }
-    .cache-control button:hover {
-      background: #155a9c;
+      margin: 0.5rem;
     }
     .status {
       margin-top: 0.5rem;
       font-weight: bold;
       min-height: 1.2em;
       color: #1976d2;
+    }
+    
+    /* Stili specifici per PWA */
+    @media (display-mode: standalone) {
+      body {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+      }
+      .container {
+        padding-top: 1rem;
+      }
+    }
+    
+    /* Media queries per dispositivi piccoli */
+    @media (max-width: 480px) {
+      .share-buttons {
+        flex-direction: column;
+      }
+      .share-buttons button {
+        flex: none;
+        width: 100%;
+      }
+    }
+    
+    /* Assicura visibilità su tutti i dispositivi */
+    @media (max-height: 600px) {
+      .cache-control {
+        margin-top: 1rem;
+      }
     }
   </style>
 </head>
@@ -100,12 +157,32 @@
   </div>
 
   <script>
+    // Versione dell'app per cache busting automatico
+    const APP_VERSION = Date.now();
+    
     // Registrazione del service worker con cache bust per aggiornamenti automatici
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=' + Date.now())
+      navigator.serviceWorker.register(`sw.js?v=${APP_VERSION}`)
         .then(reg => {
           console.log('Service Worker registrato:', reg);
-          reg.update(); // forza aggiornamento automatico
+          
+          // Controlla aggiornamenti ogni 30 secondi
+          setInterval(() => {
+            reg.update();
+          }, 30000);
+          
+          // Ascolta per nuove versioni
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // Nuovo service worker installato, chiedi se ricaricare
+                if (confirm('Nuova versione disponibile! Ricaricare la pagina?')) {
+                  window.location.reload();
+                }
+              }
+            });
+          });
         })
         .catch(err => console.error('Errore registrazione SW:', err));
     }
@@ -138,6 +215,13 @@
 
       recognition.onerror = (event) => {
         console.error('Errore riconoscimento vocale:', event.error);
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+      };
+
+      recognition.onend = () => {
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
       };
 
       startBtn.onclick = () => {
@@ -157,18 +241,34 @@
       startBtn.disabled = true;
     }
 
-    // Pulsanti condivisione
+    // Pulsanti condivisione con controllo errori
+    function shareText(url) {
+      const text = output.value.trim();
+      if (!text) {
+        alert('Nessun testo da condividere!');
+        return;
+      }
+      try {
+        window.open(url, '_blank');
+      } catch (error) {
+        console.error('Errore condivisione:', error);
+        alert('Errore durante la condivisione');
+      }
+    }
+
     document.getElementById('shareWhatsApp').onclick = () => {
       const text = encodeURIComponent(output.value);
-      window.open(`https://wa.me/?text=${text}`, '_blank');
+      shareText(`https://wa.me/?text=${text}`);
     };
+    
     document.getElementById('shareTelegram').onclick = () => {
       const text = encodeURIComponent(output.value);
-      window.open(`https://t.me/share/url?text=${text}`, '_blank');
+      shareText(`https://t.me/share/url?text=${text}`);
     };
+    
     document.getElementById('shareSMS').onclick = () => {
       const text = encodeURIComponent(output.value);
-      window.open(`sms:?body=${text}`, '_blank');
+      shareText(`sms:?body=${text}`);
     };
 
     // Funzione per pulire cache e disinstallare service worker
@@ -178,48 +278,42 @@
     clearCacheBtn.onclick = async () => {
       cacheStatus.textContent = 'Pulizia in corso...';
 
-      // Disinstalla tutti i service worker
-      if ('serviceWorker' in navigator) {
-        try {
+      try {
+        // Disinstalla tutti i service worker
+        if ('serviceWorker' in navigator) {
           const registrations = await navigator.serviceWorker.getRegistrations();
           for (const registration of registrations) {
             await registration.unregister();
           }
-          cacheStatus.textContent = 'Service worker disinstallati.';
-        } catch (e) {
-          cacheStatus.textContent = 'Errore nella disinstallazione service worker.';
-          console.error(e);
-          return;
+          cacheStatus.textContent = 'Service worker disinstallati. ';
         }
-      } else {
-        cacheStatus.textContent = 'Service worker non supportati da questo browser.';
-      }
 
-      // Svuota tutte le cache
-      if ('caches' in window) {
-        try {
+        // Svuota tutte le cache
+        if ('caches' in window) {
           const keys = await caches.keys();
           for (const key of keys) {
             await caches.delete(key);
           }
-          cacheStatus.textContent += ' Cache cancellate.';
-        } catch (e) {
-          cacheStatus.textContent = 'Errore nella cancellazione cache.';
-          console.error(e);
-          return;
+          cacheStatus.textContent += 'Cache cancellate. ';
         }
-      } else {
-        cacheStatus.textContent += ' Cache non supportate da questo browser.';
-      }
 
-      // Ricarica la pagina per riflettere i cambiamenti
-      setTimeout(() => {
-        cacheStatus.textContent = 'Pagina ricaricata.';
-        window.location.reload(true);
-      }, 1500);
+        // Ricarica la pagina
+        setTimeout(() => {
+          cacheStatus.textContent += 'Ricaricando...';
+          window.location.reload(true);
+        }, 1500);
+
+      } catch (error) {
+        console.error('Errore pulizia:', error);
+        cacheStatus.textContent = 'Errore durante la pulizia.';
+      }
     };
+
+    // Previeni zoom su iOS
+    document.addEventListener('gesturestart', function (e) {
+      e.preventDefault();
+    });
   </script>
 </body>
 </html>
-
 
