@@ -67,7 +67,7 @@
       resize: none;
       font-family: inherit;
     }
-    .share-buttons {
+    .text-actions {
       display: flex;
       justify-content: space-around;
       flex-wrap: wrap;
@@ -75,7 +75,7 @@
       margin-top: 1rem;
       width: 100%;
     }
-    .share-buttons button {
+    .text-actions button {
       flex: 1 1 30%;
       min-width: 120px;
       height: 48px;
@@ -124,11 +124,11 @@
     
     /* Media queries per dispositivi piccoli */
     @media (max-width: 480px) {
-      .share-buttons {
+      .text-actions {
         flex-direction: column;
         align-items: stretch;
       }
-      .share-buttons button {
+      .text-actions button {
         flex: none;
         width: 100%;
         margin: 0.25rem 0;
@@ -137,7 +137,7 @@
     
     /* Fix specifico per Chrome */
     @media screen and (-webkit-min-device-pixel-ratio:0) {
-      .share-buttons button {
+      .text-actions button {
         -webkit-transform: translateZ(0);
         transform: translateZ(0);
         backface-visibility: hidden;
@@ -170,10 +170,10 @@
     <button id="stopBtn" disabled>🛑 Ferma</button>
     <textarea id="output" placeholder="Il testo apparirà qui..."></textarea>
 
-    <div class="share-buttons">
-      <button id="shareWhatsApp">📱 WhatsApp</button>
-      <button id="shareTelegram">📨 Telegram</button>
-      <button id="shareSMS">✉️ SMS</button>
+    <div class="text-actions">
+      <button id="sendWA">📱 Invia su WhatsApp</button>
+      <button id="sendTG">📨 Invia su Telegram</button>
+      <button id="sendMsg">✉️ Invia Messaggio</button>
     </div>
 
     <!-- Pannello controllo cache e service worker -->
@@ -221,8 +221,11 @@
     const stopBtn = document.getElementById('stopBtn');
     const languageSelect = document.getElementById('language');
 
-    // Riconoscimento vocale
+    // Riconoscimento vocale con accumulo testo
     let recognition;
+    let fullTranscript = ''; // Variabile per accumulare tutto il testo
+    let isListening = false;
+
     if ('webkitSpeechRecognition' in window) {
       recognition = new webkitSpeechRecognition();
     } else if ('SpeechRecognition' in window) {
@@ -232,31 +235,71 @@
     if (recognition) {
       recognition.continuous = true;
       recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
 
       recognition.onresult = (event) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          transcript += event.results[i][0].transcript;
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        // Elabora tutti i risultati
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript;
+          } else {
+            interimTranscript += transcript;
+          }
         }
-        output.value = transcript;
+
+        // Se abbiamo testo finale, lo aggiungiamo al testo completo
+        if (finalTranscript) {
+          // Aggiungi spazio se c'è già del testo
+          if (fullTranscript && !fullTranscript.endsWith(' ')) {
+            fullTranscript += ' ';
+          }
+          fullTranscript += finalTranscript;
+        }
+
+        // Mostra il testo completo + quello in corso
+        output.value = fullTranscript + (interimTranscript ? ' ' + interimTranscript : '');
+      };
+
+      recognition.onstart = () => {
+        isListening = true;
+        console.log('Riconoscimento vocale avviato');
+      };
+
+      recognition.onend = () => {
+        isListening = false;
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        console.log('Riconoscimento vocale terminato');
       };
 
       recognition.onerror = (event) => {
         console.error('Errore riconoscimento vocale:', event.error);
+        isListening = false;
         startBtn.disabled = false;
         stopBtn.disabled = true;
-      };
-
-      recognition.onend = () => {
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
+        
+        // Gestione errori specifici
+        if (event.error === 'no-speech') {
+          console.log('Nessun parlato rilevato');
+        } else if (event.error === 'network') {
+          alert('Errore di rete. Controlla la connessione internet.');
+        }
       };
 
       startBtn.onclick = () => {
-        recognition.lang = languageSelect.value;
-        recognition.start();
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
+        try {
+          recognition.lang = languageSelect.value;
+          recognition.start();
+          startBtn.disabled = true;
+          stopBtn.disabled = false;
+        } catch (error) {
+          console.error('Errore avvio riconoscimento:', error);
+          alert('Errore durante l\'avvio del riconoscimento vocale');
+        }
       };
 
       stopBtn.onclick = () => {
@@ -264,39 +307,51 @@
         startBtn.disabled = false;
         stopBtn.disabled = true;
       };
+
+      // Pulsante per pulire il testo
+      const clearBtn = document.createElement('button');
+      clearBtn.textContent = '🗑️ Pulisci Testo';
+      clearBtn.onclick = () => {
+        fullTranscript = '';
+        output.value = '';
+      };
+      
+      // Inserisci il pulsante dopo la textarea
+      output.parentNode.insertBefore(clearBtn, output.nextSibling);
+
     } else {
       alert('Il riconoscimento vocale non è supportato in questo browser.');
       startBtn.disabled = true;
     }
 
-    // Pulsanti condivisione con controllo errori
-    function shareText(url) {
+    // Pulsanti di invio con controllo errori
+    function sendText(url, platform) {
       const text = output.value.trim();
       if (!text) {
-        alert('Nessun testo da condividere!');
+        alert(`Nessun testo da inviare su ${platform}!`);
         return;
       }
       try {
         window.open(url, '_blank');
       } catch (error) {
-        console.error('Errore condivisione:', error);
-        alert('Errore durante la condivisione');
+        console.error(`Errore invio ${platform}:`, error);
+        alert(`Errore durante l'invio su ${platform}`);
       }
     }
 
-    document.getElementById('shareWhatsApp').onclick = () => {
+    document.getElementById('sendWA').onclick = () => {
       const text = encodeURIComponent(output.value);
-      shareText(`https://wa.me/?text=${text}`);
+      sendText(`https://wa.me/?text=${text}`, 'WhatsApp');
     };
     
-    document.getElementById('shareTelegram').onclick = () => {
+    document.getElementById('sendTG').onclick = () => {
       const text = encodeURIComponent(output.value);
-      shareText(`https://t.me/share/url?text=${text}`);
+      sendText(`https://t.me/share/url?text=${text}`, 'Telegram');
     };
     
-    document.getElementById('shareSMS').onclick = () => {
+    document.getElementById('sendMsg').onclick = () => {
       const text = encodeURIComponent(output.value);
-      shareText(`sms:?body=${text}`);
+      sendText(`sms:?body=${text}`, 'SMS');
     };
 
     // Funzione per pulire cache e disinstallare service worker
