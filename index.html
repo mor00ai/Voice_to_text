@@ -130,6 +130,15 @@
       justify-content: center;
     }
     
+    .language-info {
+      font-size: 0.8rem;
+      color: #666;
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      background: #f9f9f9;
+      border-radius: 4px;
+    }
+    
     /* Stili specifici per PWA */
     @media (display-mode: standalone) {
       body {
@@ -188,11 +197,19 @@
     <label for="language">🌐 Seleziona Lingua:</label>
     <select id="language">
       <option value="it-IT">🇮🇹 Italiano</option>
-      <option value="en-US">🇺🇸 English</option>
-      <option value="es-ES">🇪🇸 Español</option>
+      <option value="en-US">🇺🇸 English (US)</option>
+      <option value="en-GB">🇬🇧 English (UK)</option>
+      <option value="es-ES">🇪🇸 Español (España)</option>
+      <option value="es-MX">🇲🇽 Español (México)</option>
       <option value="fr-FR">🇫🇷 Français</option>
       <option value="de-DE">🇩🇪 Deutsch</option>
+      <option value="pt-PT">🇵🇹 Português (Portugal)</option>
+      <option value="pt-BR">🇧🇷 Português (Brasil)</option>
     </select>
+    
+    <div class="language-info" id="languageInfo">
+      Lingua selezionata: Italiano - Ottimizzato per riconoscimento continuo
+    </div>
 
     <button id="startBtn">🎙️ Avvia Registrazione</button>
     <button id="stopBtn" disabled>🛑 Ferma</button>
@@ -220,6 +237,118 @@
   <script>
     // Versione dell'app per cache busting automatico
     const APP_VERSION = Date.now();
+    
+    // Configurazioni specifiche per lingua per ottimizzare il riconoscimento
+    const LANGUAGE_CONFIGS = {
+      'it-IT': {
+        name: 'Italiano',
+        flag: '🇮🇹',
+        continuous: true,
+        interimResults: true,
+        maxAlternatives: 3,
+        grammars: null,
+        sensitivity: 'high',
+        restartDelay: 100,
+        silenceTimeout: 4000,
+        maxSilence: 6000
+      },
+      'en-US': {
+        name: 'English (US)',
+        flag: '🇺🇸',
+        continuous: true,
+        interimResults: true,
+        maxAlternatives: 3,
+        grammars: null,
+        sensitivity: 'high',
+        restartDelay: 150,
+        silenceTimeout: 3500,
+        maxSilence: 5500
+      },
+      'en-GB': {
+        name: 'English (UK)',
+        flag: '🇬🇧',
+        continuous: true,
+        interimResults: true,
+        maxAlternatives: 3,
+        grammars: null,
+        sensitivity: 'high',
+        restartDelay: 150,
+        silenceTimeout: 3500,
+        maxSilence: 5500
+      },
+      'es-ES': {
+        name: 'Español (España)',
+        flag: '🇪🇸',
+        continuous: true,
+        interimResults: true,
+        maxAlternatives: 3,
+        grammars: null,
+        sensitivity: 'high',
+        restartDelay: 100,
+        silenceTimeout: 3000,
+        maxSilence: 5000
+      },
+      'es-MX': {
+        name: 'Español (México)',
+        flag: '🇲🇽',
+        continuous: true,
+        interimResults: true,
+        maxAlternatives: 3,
+        grammars: null,
+        sensitivity: 'high',
+        restartDelay: 100,
+        silenceTimeout: 3000,
+        maxSilence: 5000
+      },
+      'fr-FR': {
+        name: 'Français',
+        flag: '🇫🇷',
+        continuous: true,
+        interimResults: true,
+        maxAlternatives: 3,
+        grammars: null,
+        sensitivity: 'high',
+        restartDelay: 200,
+        silenceTimeout: 4000,
+        maxSilence: 6000
+      },
+      'de-DE': {
+        name: 'Deutsch',
+        flag: '🇩🇪',
+        continuous: true,
+        interimResults: true,
+        maxAlternatives: 3,
+        grammars: null,
+        sensitivity: 'high',
+        restartDelay: 200,
+        silenceTimeout: 4500,
+        maxSilence: 6500
+      },
+      'pt-PT': {
+        name: 'Português (Portugal)',
+        flag: '🇵🇹',
+        continuous: true,
+        interimResults: true,
+        maxAlternatives: 3,
+        grammars: null,
+        sensitivity: 'high',
+        restartDelay: 150,
+        silenceTimeout: 3500,
+        maxSilence: 5500
+      },
+      'pt-BR': {
+        name: 'Português (Brasil)',
+        flag: '🇧🇷',
+        continuous: true,
+        interimResults: true,
+        maxAlternatives: 3,
+        grammars: null,
+        sensitivity: 'high',
+        restartDelay: 150,
+        silenceTimeout: 3500,
+        maxSilence: 5500
+      }
+    };
     
     // Registrazione del service worker con cache bust per aggiornamenti automatici
     if ('serviceWorker' in navigator) {
@@ -254,6 +383,7 @@
     const stopBtn = document.getElementById('stopBtn');
     const languageSelect = document.getElementById('language');
     const recognitionStatus = document.getElementById('recognitionStatus');
+    const languageInfo = document.getElementById('languageInfo');
 
     // Variabili per riconoscimento vocale migliorato
     let recognition;
@@ -263,12 +393,25 @@
     let restartTimeout;
     let silenceTimeout;
     let lastResultTime = Date.now();
+    let currentConfig = LANGUAGE_CONFIGS['it-IT'];
+    let consecutiveErrors = 0;
+    let maxConsecutiveErrors = 3;
 
     // Funzione per aggiornare lo status
     function updateStatus(message, isError = false) {
       recognitionStatus.textContent = message;
       recognitionStatus.style.background = isError ? '#ffebee' : '#e3f2fd';
       recognitionStatus.style.color = isError ? '#d32f2f' : '#1976d2';
+    }
+
+    // Funzione per aggiornare info lingua
+    function updateLanguageInfo() {
+      const selectedLang = languageSelect.value;
+      const config = LANGUAGE_CONFIGS[selectedLang];
+      if (config) {
+        languageInfo.textContent = `${config.flag} ${config.name} - Ottimizzato per riconoscimento continuo`;
+        currentConfig = config;
+      }
     }
 
     // Inizializzazione riconoscimento vocale migliorato
@@ -283,44 +426,67 @@
         return;
       }
 
-      // Configurazione ottimizzata
+      // Configurazione base con parametri ottimizzati
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.maxAlternatives = 1;
+      recognition.maxAlternatives = 3;
 
       recognition.onstart = () => {
-        console.log('Riconoscimento vocale avviato');
+        console.log('Riconoscimento vocale avviato per:', currentConfig.name);
         isListening = true;
         shouldRestart = true;
         lastResultTime = Date.now();
+        consecutiveErrors = 0;
         startBtn.classList.add('recording');
-        updateStatus('🎙️ In ascolto... Parla ora!');
+        updateStatus(`🎙️ In ascolto ${currentConfig.flag} Parla ora!`);
         
         // Reset timeout per riavvio automatico dopo silenzio
         clearTimeout(silenceTimeout);
-        silenceTimeout = setTimeout(checkForSilence, 3000);
+        silenceTimeout = setTimeout(checkForSilence, currentConfig.silenceTimeout);
       };
 
       recognition.onresult = (event) => {
         lastResultTime = Date.now();
+        consecutiveErrors = 0; // Reset errori consecutivi su risultato valido
+        
         let interimTranscript = '';
         let finalTranscript = '';
 
         // Elabora tutti i risultati dall'ultimo indice
         for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript.trim();
-          if (event.results[i].isFinal) {
-            finalTranscript += transcript;
+          const result = event.results[i];
+          
+          // Prendi il miglior risultato tra le alternative
+          let bestTranscript = result[0].transcript.trim();
+          let bestConfidence = result[0].confidence || 0;
+          
+          // Controlla tutte le alternative per trovare la migliore
+          for (let j = 1; j < Math.min(result.length, currentConfig.maxAlternatives); j++) {
+            const altConfidence = result[j].confidence || 0;
+            if (altConfidence > bestConfidence) {
+              bestTranscript = result[j].transcript.trim();
+              bestConfidence = altConfidence;
+            }
+          }
+          
+          if (result.isFinal) {
+            finalTranscript += bestTranscript;
           } else {
-            interimTranscript += transcript;
+            interimTranscript += bestTranscript;
           }
         }
 
         // Aggiunge testo finale al transcript completo
         if (finalTranscript) {
-          if (fullTranscript && !fullTranscript.endsWith(' ') && !fullTranscript.endsWith('.') && !fullTranscript.endsWith('!') && !fullTranscript.endsWith('?')) {
+          // Gestione intelligente della punteggiatura e spaziatura
+          if (fullTranscript && !fullTranscript.endsWith(' ') && 
+              !fullTranscript.match(/[.!?]$/) && 
+              !finalTranscript.match(/^[.!?,;:]/) &&
+              !finalTranscript.match(/^[A-Z]/)) {
             fullTranscript += ' ';
           }
+          
+          // Aggiunge il nuovo testo
           fullTranscript += finalTranscript;
           
           // Capitalizza la prima lettera se necessario
@@ -330,46 +496,53 @@
         }
 
         // Mostra testo completo + interim
-        const displayText = fullTranscript + (interimTranscript ? (fullTranscript ? ' ' : '') + interimTranscript : '');
+        const displayText = fullTranscript + (interimTranscript ? (fullTranscript && !fullTranscript.endsWith(' ') ? ' ' : '') + interimTranscript : '');
         output.value = displayText;
 
         // Aggiorna status con feedback visivo
         if (interimTranscript) {
-          updateStatus('🎤 Elaborando... "' + interimTranscript.substring(0, 30) + (interimTranscript.length > 30 ? '...' : '') + '"');
+          const truncated = interimTranscript.substring(0, 25) + (interimTranscript.length > 25 ? '...' : '');
+          updateStatus(`🎤 ${currentConfig.flag} Elaborando... "${truncated}"`);
         } else if (finalTranscript) {
-          updateStatus('✅ Testo aggiunto! Continua a parlare...');
+          updateStatus(`✅ ${currentConfig.flag} Testo aggiunto! Continua a parlare...`);
         }
 
         // Reset timeout per controllo silenzio
         clearTimeout(silenceTimeout);
-        silenceTimeout = setTimeout(checkForSilence, 5000);
+        silenceTimeout = setTimeout(checkForSilence, currentConfig.silenceTimeout);
       };
 
       recognition.onend = () => {
-        console.log('Riconoscimento vocale terminato');
+        console.log('Riconoscimento vocale terminato per:', currentConfig.name);
         isListening = false;
         startBtn.classList.remove('recording');
         
         clearTimeout(restartTimeout);
         clearTimeout(silenceTimeout);
 
-        // Riavvia automaticamente se dovrebbe continuare
-        if (shouldRestart && !stopBtn.disabled) {
-          updateStatus('🔄 Riavvio automatico...');
+        // Riavvia automaticamente se dovrebbe continuare e non ci sono troppi errori
+        if (shouldRestart && !stopBtn.disabled && consecutiveErrors < maxConsecutiveErrors) {
+          updateStatus(`🔄 ${currentConfig.flag} Riavvio automatico...`);
           restartTimeout = setTimeout(() => {
             if (shouldRestart) {
               startRecognition();
             }
-          }, 100);
+          }, currentConfig.restartDelay);
         } else {
           updateUI(false);
-          updateStatus('Registrazione completata');
+          if (consecutiveErrors >= maxConsecutiveErrors) {
+            updateStatus(`❌ Troppi errori consecutivi. Riavvia manualmente.`, true);
+            consecutiveErrors = 0;
+          } else {
+            updateStatus(`${currentConfig.flag} Registrazione completata`);
+          }
         }
       };
 
       recognition.onerror = (event) => {
-        console.error('Errore riconoscimento vocale:', event.error);
+        console.error('Errore riconoscimento vocale:', event.error, 'Lingua:', currentConfig.name);
         isListening = false;
+        consecutiveErrors++;
         
         clearTimeout(restartTimeout);
         clearTimeout(silenceTimeout);
@@ -377,52 +550,69 @@
         // Gestione errori specifici con riavvio intelligente
         switch (event.error) {
           case 'no-speech':
-            if (shouldRestart) {
-              updateStatus('🔇 Nessun audio rilevato. Riavvio...');
+            if (shouldRestart && consecutiveErrors < maxConsecutiveErrors) {
+              updateStatus(`🔇 ${currentConfig.flag} Nessun audio. Riavvio...`);
               restartTimeout = setTimeout(() => {
                 if (shouldRestart) startRecognition();
-              }, 1000);
+              }, currentConfig.restartDelay * 2);
             } else {
-              updateStatus('Nessun audio rilevato', true);
+              updateStatus(`${currentConfig.flag} Nessun audio rilevato`, true);
               updateUI(false);
             }
             break;
             
           case 'network':
-            updateStatus('❌ Errore di rete. Controlla la connessione.', true);
+            updateStatus(`❌ ${currentConfig.flag} Errore di rete. Controlla connessione.`, true);
             shouldRestart = false;
             updateUI(false);
             break;
             
           case 'not-allowed':
-            updateStatus('❌ Microfono non autorizzato. Abilita i permessi.', true);
+            updateStatus(`❌ ${currentConfig.flag} Microfono non autorizzato.`, true);
             shouldRestart = false;
             updateUI(false);
             break;
             
           case 'service-not-allowed':
-            updateStatus('❌ Servizio non disponibile. Riprova più tardi.', true);
+            updateStatus(`❌ ${currentConfig.flag} Servizio non disponibile.`, true);
             shouldRestart = false;
             updateUI(false);
             break;
             
           case 'aborted':
-            if (shouldRestart) {
-              updateStatus('🔄 Riavvio dopo interruzione...');
+            if (shouldRestart && consecutiveErrors < maxConsecutiveErrors) {
+              updateStatus(`🔄 ${currentConfig.flag} Riavvio dopo interruzione...`);
               restartTimeout = setTimeout(() => {
                 if (shouldRestart) startRecognition();
-              }, 500);
+              }, currentConfig.restartDelay);
             }
             break;
             
-          default:
-            if (shouldRestart) {
-              updateStatus('⚠️ Errore temporaneo. Riavvio...', true);
+          case 'audio-capture':
+            updateStatus(`❌ ${currentConfig.flag} Errore cattura audio. Riprova.`, true);
+            if (shouldRestart && consecutiveErrors < maxConsecutiveErrors) {
               restartTimeout = setTimeout(() => {
                 if (shouldRestart) startRecognition();
-              }, 1500);
+              }, currentConfig.restartDelay * 3);
             } else {
-              updateStatus(`Errore: ${event.error}`, true);
+              updateUI(false);
+            }
+            break;
+            
+          case 'language-not-supported':
+            updateStatus(`❌ ${currentConfig.flag} Lingua non supportata su questo dispositivo.`, true);
+            shouldRestart = false;
+            updateUI(false);
+            break;
+            
+          default:
+            if (shouldRestart && consecutiveErrors < maxConsecutiveErrors) {
+              updateStatus(`⚠️ ${currentConfig.flag} Errore temporaneo. Riavvio...`, true);
+              restartTimeout = setTimeout(() => {
+                if (shouldRestart) startRecognition();
+              }, currentConfig.restartDelay * 2);
+            } else {
+              updateStatus(`❌ ${currentConfig.flag} Errore: ${event.error}`, true);
               updateUI(false);
             }
         }
@@ -432,8 +622,8 @@
     // Funzione per controllare il silenzio prolungato
     function checkForSilence() {
       const timeSinceLastResult = Date.now() - lastResultTime;
-      if (timeSinceLastResult > 4000 && isListening && shouldRestart) {
-        console.log('Silenzio prolungato rilevato, riavvio...');
+      if (timeSinceLastResult > currentConfig.maxSilence && isListening && shouldRestart) {
+        console.log('Silenzio prolungato rilevato per', currentConfig.name, ', riavvio...');
         recognition.stop(); // Questo triggererà onend che gestirà il riavvio
       }
     }
@@ -446,13 +636,24 @@
           return;
         }
         
-        recognition.lang = languageSelect.value;
+        // Applica configurazione specifica per lingua
+        const selectedLang = languageSelect.value;
+        const config = LANGUAGE_CONFIGS[selectedLang] || LANGUAGE_CONFIGS['it-IT'];
+        
+        recognition.lang = selectedLang;
+        recognition.continuous = config.continuous;
+        recognition.interimResults = config.interimResults;
+        recognition.maxAlternatives = config.maxAlternatives;
+        
+        // Avvia il riconoscimento
         recognition.start();
         lastResultTime = Date.now();
+        
       } catch (error) {
         console.error('Errore avvio riconoscimento:', error);
-        updateStatus('Errore durante l\'avvio', true);
+        updateStatus(`❌ ${currentConfig.flag} Errore durante l'avvio`, true);
         updateUI(false);
+        consecutiveErrors++;
       }
     }
 
@@ -468,6 +669,7 @@
     // Event listeners per i pulsanti
     startBtn.onclick = () => {
       shouldRestart = true;
+      consecutiveErrors = 0;
       updateUI(true);
       startRecognition();
     };
@@ -480,7 +682,18 @@
         recognition.stop();
       }
       updateUI(false);
-      updateStatus('Registrazione fermata');
+      updateStatus(`${currentConfig.flag} Registrazione fermata`);
+    };
+
+    // Gestione cambio lingua
+    languageSelect.onchange = () => {
+      updateLanguageInfo();
+      
+      if (isListening) {
+        // Ferma e riavvia con nuova lingua
+        shouldRestart = true;
+        recognition.stop();
+      }
     };
 
     // Pulsante per pulire il testo
@@ -489,13 +702,14 @@
     clearBtn.onclick = () => {
       fullTranscript = '';
       output.value = '';
-      updateStatus('Testo cancellato. Pronto per nuova registrazione.');
+      updateStatus(`${currentConfig.flag} Testo cancellato. Pronto per nuova registrazione.`);
     };
     
     // Inserisci il pulsante dopo la textarea
     output.parentNode.insertBefore(clearBtn, output.nextSibling);
 
-    // Inizializza il riconoscimento
+    // Inizializza
+    updateLanguageInfo();
     initRecognition();
 
     // Pulsanti di invio con controllo errori
@@ -598,7 +812,7 @@
         updateStatus(`✅ PDF esportato: ${fileName}`);
         setTimeout(() => {
           if (!isListening) {
-            updateStatus('Pronto per la registrazione');
+            updateStatus(`${currentConfig.flag} Pronto per la registrazione`);
           }
         }, 3000);
         
@@ -651,22 +865,77 @@
       e.preventDefault();
     });
 
-    // Gestione cambio lingua durante registrazione
-    languageSelect.onchange = () => {
-      if (isListening) {
-        // Ferma e riavvia con nuova lingua
-        shouldRestart = true;
-        recognition.stop();
-      }
-    };
-
     // Gestione visibilità pagina per evitare blocchi
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && isListening) {
         console.log('Pagina nascosta durante registrazione');
+        // Mantieni la registrazione attiva anche quando la pagina è nascosta
       } else if (!document.hidden && shouldRestart && !isListening) {
         console.log('Pagina visibile, controllo stato registrazione');
+        // Riavvia se necessario quando la pagina torna visibile
+        if (shouldRestart) {
+          setTimeout(() => {
+            if (shouldRestart && !isListening) {
+              startRecognition();
+            }
+          }, 500);
+        }
       }
+    });
+
+    // Gestione eventi touch per migliorare l'esperienza mobile
+    document.addEventListener('touchstart', function() {}, {passive: true});
+    
+    // Prevenire comportamenti indesiderati su mobile
+    document.addEventListener('touchmove', function(e) {
+      if (e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+      }
+    }, {passive: false});
+
+    // Test di compatibilità al caricamento
+    window.addEventListener('load', () => {
+      // Verifica supporto riconoscimento vocale
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        updateStatus('❌ Riconoscimento vocale non supportato su questo browser', true);
+        startBtn.disabled = true;
+        stopBtn.disabled = true;
+        return;
+      }
+
+      // Test microfono
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then(stream => {
+            stream.getTracks().forEach(track => track.stop());
+            updateStatus(`${currentConfig.flag} Tutto pronto! Microfono funzionante.`);
+          })
+          .catch(err => {
+            console.warn('Test microfono fallito:', err);
+            updateStatus(`⚠️ ${currentConfig.flag} Controlla i permessi del microfono`, true);
+          });
+      }
+
+      // Informazioni di debug
+      console.log('Voice to Text PWA caricato');
+      console.log('Lingue supportate:', Object.keys(LANGUAGE_CONFIGS));
+      console.log('Configurazione corrente:', currentConfig);
+    });
+
+    // Gestione errori globali
+    window.addEventListener('error', (e) => {
+      console.error('Errore globale:', e.error);
+      if (isListening) {
+        updateStatus(`❌ ${currentConfig.flag} Errore imprevisto. Riavvia la registrazione.`, true);
+        shouldRestart = false;
+        updateUI(false);
+      }
+    });
+
+    // Gestione promesse respinte
+    window.addEventListener('unhandledrejection', (e) => {
+      console.error('Promessa respinta:', e.reason);
+      e.preventDefault();
     });
   </script>
 </body>
