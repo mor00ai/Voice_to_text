@@ -62,6 +62,15 @@
       background: #ccc;
       cursor: not-allowed;
     }
+    button.recording {
+      background: #d32f2f;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.7; }
+      100% { opacity: 1; }
+    }
     textarea {
       height: 150px;
       resize: none;
@@ -108,6 +117,18 @@
       min-height: 1.2em;
       color: #1976d2;
     }
+    .recognition-status {
+      margin: 0.5rem 0;
+      padding: 0.5rem;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      background: #e3f2fd;
+      color: #1976d2;
+      min-height: 2em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
     
     /* Stili specifici per PWA */
     @media (display-mode: standalone) {
@@ -132,6 +153,13 @@
         flex: none;
         width: 100%;
         margin: 0.25rem 0;
+      }
+    }
+    
+    @media (max-width: 600px) and (min-width: 481px) {
+      .text-actions button {
+        flex: 1 1 45%;
+        min-width: 140px;
       }
     }
     
@@ -168,12 +196,16 @@
 
     <button id="startBtn">🎙️ Avvia Registrazione</button>
     <button id="stopBtn" disabled>🛑 Ferma</button>
+    
+    <div class="recognition-status" id="recognitionStatus">Pronto per la registrazione</div>
+    
     <textarea id="output" placeholder="Il testo apparirà qui..."></textarea>
 
     <div class="text-actions">
       <button id="sendWA">📱 Invia su WhatsApp</button>
       <button id="sendTG">📨 Invia su Telegram</button>
       <button id="sendMsg">✉️ Invia Messaggio</button>
+      <button id="exportPDF">📄 Esporta PDF</button>
     </div>
 
     <!-- Pannello controllo cache e service worker -->
@@ -184,6 +216,7 @@
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script>
     // Versione dell'app per cache busting automatico
     const APP_VERSION = Date.now();
@@ -220,30 +253,62 @@
     const startBtn = document.getElementById('startBtn');
     const stopBtn = document.getElementById('stopBtn');
     const languageSelect = document.getElementById('language');
+    const recognitionStatus = document.getElementById('recognitionStatus');
 
-    // Riconoscimento vocale con accumulo testo
+    // Variabili per riconoscimento vocale migliorato
     let recognition;
-    let fullTranscript = ''; // Variabile per accumulare tutto il testo
+    let fullTranscript = '';
     let isListening = false;
+    let shouldRestart = false;
+    let restartTimeout;
+    let silenceTimeout;
+    let lastResultTime = Date.now();
 
-    if ('webkitSpeechRecognition' in window) {
-      recognition = new webkitSpeechRecognition();
-    } else if ('SpeechRecognition' in window) {
-      recognition = new SpeechRecognition();
+    // Funzione per aggiornare lo status
+    function updateStatus(message, isError = false) {
+      recognitionStatus.textContent = message;
+      recognitionStatus.style.background = isError ? '#ffebee' : '#e3f2fd';
+      recognitionStatus.style.color = isError ? '#d32f2f' : '#1976d2';
     }
 
-    if (recognition) {
+    // Inizializzazione riconoscimento vocale migliorato
+    function initRecognition() {
+      if ('webkitSpeechRecognition' in window) {
+        recognition = new webkitSpeechRecognition();
+      } else if ('SpeechRecognition' in window) {
+        recognition = new SpeechRecognition();
+      } else {
+        updateStatus('Riconoscimento vocale non supportato', true);
+        startBtn.disabled = true;
+        return;
+      }
+
+      // Configurazione ottimizzata
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
 
+      recognition.onstart = () => {
+        console.log('Riconoscimento vocale avviato');
+        isListening = true;
+        shouldRestart = true;
+        lastResultTime = Date.now();
+        startBtn.classList.add('recording');
+        updateStatus('🎙️ In ascolto... Parla ora!');
+        
+        // Reset timeout per riavvio automatico dopo silenzio
+        clearTimeout(silenceTimeout);
+        silenceTimeout = setTimeout(checkForSilence, 3000);
+      };
+
       recognition.onresult = (event) => {
+        lastResultTime = Date.now();
         let interimTranscript = '';
         let finalTranscript = '';
 
-        // Elabora tutti i risultati
+        // Elabora tutti i risultati dall'ultimo indice
         for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
+          const transcript = event.results[i][0].transcript.trim();
           if (event.results[i].isFinal) {
             finalTranscript += transcript;
           } else {
@@ -251,78 +316,187 @@
           }
         }
 
-        // Se abbiamo testo finale, lo aggiungiamo al testo completo
+        // Aggiunge testo finale al transcript completo
         if (finalTranscript) {
-          // Aggiungi spazio se c'è già del testo
-          if (fullTranscript && !fullTranscript.endsWith(' ')) {
+          if (fullTranscript && !fullTranscript.endsWith(' ') && !fullTranscript.endsWith('.') && !fullTranscript.endsWith('!') && !fullTranscript.endsWith('?')) {
             fullTranscript += ' ';
           }
           fullTranscript += finalTranscript;
+          
+          // Capitalizza la prima lettera se necessario
+          if (fullTranscript.length > 0) {
+            fullTranscript = fullTranscript.charAt(0).toUpperCase() + fullTranscript.slice(1);
+          }
         }
 
-        // Mostra il testo completo + quello in corso
-        output.value = fullTranscript + (interimTranscript ? ' ' + interimTranscript : '');
-      };
+        // Mostra testo completo + interim
+        const displayText = fullTranscript + (interimTranscript ? (fullTranscript ? ' ' : '') + interimTranscript : '');
+        output.value = displayText;
 
-      recognition.onstart = () => {
-        isListening = true;
-        console.log('Riconoscimento vocale avviato');
+        // Aggiorna status con feedback visivo
+        if (interimTranscript) {
+          updateStatus('🎤 Elaborando... "' + interimTranscript.substring(0, 30) + (interimTranscript.length > 30 ? '...' : '') + '"');
+        } else if (finalTranscript) {
+          updateStatus('✅ Testo aggiunto! Continua a parlare...');
+        }
+
+        // Reset timeout per controllo silenzio
+        clearTimeout(silenceTimeout);
+        silenceTimeout = setTimeout(checkForSilence, 5000);
       };
 
       recognition.onend = () => {
-        isListening = false;
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
         console.log('Riconoscimento vocale terminato');
+        isListening = false;
+        startBtn.classList.remove('recording');
+        
+        clearTimeout(restartTimeout);
+        clearTimeout(silenceTimeout);
+
+        // Riavvia automaticamente se dovrebbe continuare
+        if (shouldRestart && !stopBtn.disabled) {
+          updateStatus('🔄 Riavvio automatico...');
+          restartTimeout = setTimeout(() => {
+            if (shouldRestart) {
+              startRecognition();
+            }
+          }, 100);
+        } else {
+          updateUI(false);
+          updateStatus('Registrazione completata');
+        }
       };
 
       recognition.onerror = (event) => {
         console.error('Errore riconoscimento vocale:', event.error);
         isListening = false;
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
         
-        // Gestione errori specifici
-        if (event.error === 'no-speech') {
-          console.log('Nessun parlato rilevato');
-        } else if (event.error === 'network') {
-          alert('Errore di rete. Controlla la connessione internet.');
+        clearTimeout(restartTimeout);
+        clearTimeout(silenceTimeout);
+
+        // Gestione errori specifici con riavvio intelligente
+        switch (event.error) {
+          case 'no-speech':
+            if (shouldRestart) {
+              updateStatus('🔇 Nessun audio rilevato. Riavvio...');
+              restartTimeout = setTimeout(() => {
+                if (shouldRestart) startRecognition();
+              }, 1000);
+            } else {
+              updateStatus('Nessun audio rilevato', true);
+              updateUI(false);
+            }
+            break;
+            
+          case 'network':
+            updateStatus('❌ Errore di rete. Controlla la connessione.', true);
+            shouldRestart = false;
+            updateUI(false);
+            break;
+            
+          case 'not-allowed':
+            updateStatus('❌ Microfono non autorizzato. Abilita i permessi.', true);
+            shouldRestart = false;
+            updateUI(false);
+            break;
+            
+          case 'service-not-allowed':
+            updateStatus('❌ Servizio non disponibile. Riprova più tardi.', true);
+            shouldRestart = false;
+            updateUI(false);
+            break;
+            
+          case 'aborted':
+            if (shouldRestart) {
+              updateStatus('🔄 Riavvio dopo interruzione...');
+              restartTimeout = setTimeout(() => {
+                if (shouldRestart) startRecognition();
+              }, 500);
+            }
+            break;
+            
+          default:
+            if (shouldRestart) {
+              updateStatus('⚠️ Errore temporaneo. Riavvio...', true);
+              restartTimeout = setTimeout(() => {
+                if (shouldRestart) startRecognition();
+              }, 1500);
+            } else {
+              updateStatus(`Errore: ${event.error}`, true);
+              updateUI(false);
+            }
         }
       };
-
-      startBtn.onclick = () => {
-        try {
-          recognition.lang = languageSelect.value;
-          recognition.start();
-          startBtn.disabled = true;
-          stopBtn.disabled = false;
-        } catch (error) {
-          console.error('Errore avvio riconoscimento:', error);
-          alert('Errore durante l\'avvio del riconoscimento vocale');
-        }
-      };
-
-      stopBtn.onclick = () => {
-        recognition.stop();
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
-      };
-
-      // Pulsante per pulire il testo
-      const clearBtn = document.createElement('button');
-      clearBtn.textContent = '🗑️ Pulisci Testo';
-      clearBtn.onclick = () => {
-        fullTranscript = '';
-        output.value = '';
-      };
-      
-      // Inserisci il pulsante dopo la textarea
-      output.parentNode.insertBefore(clearBtn, output.nextSibling);
-
-    } else {
-      alert('Il riconoscimento vocale non è supportato in questo browser.');
-      startBtn.disabled = true;
     }
+
+    // Funzione per controllare il silenzio prolungato
+    function checkForSilence() {
+      const timeSinceLastResult = Date.now() - lastResultTime;
+      if (timeSinceLastResult > 4000 && isListening && shouldRestart) {
+        console.log('Silenzio prolungato rilevato, riavvio...');
+        recognition.stop(); // Questo triggererà onend che gestirà il riavvio
+      }
+    }
+
+    // Funzione per avviare il riconoscimento
+    function startRecognition() {
+      try {
+        if (isListening) {
+          recognition.stop();
+          return;
+        }
+        
+        recognition.lang = languageSelect.value;
+        recognition.start();
+        lastResultTime = Date.now();
+      } catch (error) {
+        console.error('Errore avvio riconoscimento:', error);
+        updateStatus('Errore durante l\'avvio', true);
+        updateUI(false);
+      }
+    }
+
+    // Funzione per aggiornare l'interfaccia
+    function updateUI(isRecording) {
+      startBtn.disabled = isRecording;
+      stopBtn.disabled = !isRecording;
+      if (!isRecording) {
+        startBtn.classList.remove('recording');
+      }
+    }
+
+    // Event listeners per i pulsanti
+    startBtn.onclick = () => {
+      shouldRestart = true;
+      updateUI(true);
+      startRecognition();
+    };
+
+    stopBtn.onclick = () => {
+      shouldRestart = false;
+      clearTimeout(restartTimeout);
+      clearTimeout(silenceTimeout);
+      if (isListening) {
+        recognition.stop();
+      }
+      updateUI(false);
+      updateStatus('Registrazione fermata');
+    };
+
+    // Pulsante per pulire il testo
+    const clearBtn = document.createElement('button');
+    clearBtn.textContent = '🗑️ Pulisci Testo';
+    clearBtn.onclick = () => {
+      fullTranscript = '';
+      output.value = '';
+      updateStatus('Testo cancellato. Pronto per nuova registrazione.');
+    };
+    
+    // Inserisci il pulsante dopo la textarea
+    output.parentNode.insertBefore(clearBtn, output.nextSibling);
+
+    // Inizializza il riconoscimento
+    initRecognition();
 
     // Pulsanti di invio con controllo errori
     function sendText(url, platform) {
@@ -352,6 +526,86 @@
     document.getElementById('sendMsg').onclick = () => {
       const text = encodeURIComponent(output.value);
       sendText(`sms:?body=${text}`, 'SMS');
+    };
+
+    // Funzione per esportare in PDF
+    document.getElementById('exportPDF').onclick = () => {
+      const text = output.value.trim();
+      if (!text) {
+        alert('Nessun testo da esportare in PDF!');
+        return;
+      }
+
+      try {
+        // Crea una nuova istanza jsPDF
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        // Configurazione del documento
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 20;
+        const maxWidth = pageWidth - (margin * 2);
+        
+        // Titolo del documento
+        doc.setFontSize(16);
+        doc.setFont(undefined, 'bold');
+        doc.text('Trascrizione Vocale', margin, margin + 10);
+        
+        // Data e ora
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('it-IT') + ' alle ' + now.toLocaleTimeString('it-IT');
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'normal');
+        doc.text(`Generato il: ${dateStr}`, margin, margin + 20);
+        
+        // Lingua utilizzata
+        const langText = languageSelect.options[languageSelect.selectedIndex].text;
+        doc.text(`Lingua: ${langText}`, margin, margin + 28);
+        
+        // Linea separatrice
+        doc.setLineWidth(0.5);
+        doc.line(margin, margin + 35, pageWidth - margin, margin + 35);
+        
+        // Contenuto del testo
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'normal');
+        
+        // Dividi il testo in righe che si adattano alla pagina
+        const splitText = doc.splitTextToSize(text, maxWidth);
+        let currentY = margin + 45;
+        
+        // Aggiungi il testo riga per riga, gestendo le pagine multiple
+        for (let i = 0; i < splitText.length; i++) {
+          // Se la riga non entra nella pagina corrente, crea una nuova pagina
+          if (currentY > pageHeight - margin) {
+            doc.addPage();
+            currentY = margin + 10;
+          }
+          
+          doc.text(splitText[i], margin, currentY);
+          currentY += 7; // Spaziatura tra le righe
+        }
+        
+        // Genera il nome del file con timestamp
+        const timestamp = now.toISOString().slice(0, 19).replace(/[:-]/g, '').replace('T', '_');
+        const fileName = `trascrizione_${timestamp}.pdf`;
+        
+        // Salva il PDF
+        doc.save(fileName);
+        
+        // Feedback all'utente
+        updateStatus(`✅ PDF esportato: ${fileName}`);
+        setTimeout(() => {
+          if (!isListening) {
+            updateStatus('Pronto per la registrazione');
+          }
+        }, 3000);
+        
+      } catch (error) {
+        console.error('Errore durante l\'esportazione PDF:', error);
+        alert('Errore durante l\'esportazione del PDF. Riprova.');
+      }
     };
 
     // Funzione per pulire cache e disinstallare service worker
@@ -395,6 +649,24 @@
     // Previeni zoom su iOS
     document.addEventListener('gesturestart', function (e) {
       e.preventDefault();
+    });
+
+    // Gestione cambio lingua durante registrazione
+    languageSelect.onchange = () => {
+      if (isListening) {
+        // Ferma e riavvia con nuova lingua
+        shouldRestart = true;
+        recognition.stop();
+      }
+    };
+
+    // Gestione visibilità pagina per evitare blocchi
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && isListening) {
+        console.log('Pagina nascosta durante registrazione');
+      } else if (!document.hidden && shouldRestart && !isListening) {
+        console.log('Pagina visibile, controllo stato registrazione');
+      }
     });
   </script>
 </body>
